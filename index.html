@@ -1,0 +1,882 @@
+<!doctype html>
+<!-- Tablewright: sql.js asm.js build is used (no WASM fetch), so it runs when hosted or via python3 -m http.server -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Tablewright</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+<style>
+:root{--sans:"Inter",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;--mono:var(--sans);
+--bg:#fafafa;--surf:#fff;--bd:#e4e4e7;--tx:#18181b;--mu:#52525b;--hv:#f4f4f5;--chip:#f0f0f2;--ac:#4f46e5;--acl:#4f46e5;--sel:#eef0ff;
+--dg:#b91c1c;--dgb:#fef2f2;--wn:#92400e;--wnb:#fef3c7;--wd:#d97706;--ok:#15803d;--sh:0 4px 16px rgba(0,0,0,.12);--rh:32px;color-scheme:light;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#18181b;--surf:#1f1f23;--bd:#323238;--tx:#f4f4f5;--mu:#a1a1aa;--hv:#2a2a30;--chip:#2a2a30;--acl:#818cf8;--sel:#2a2b4a;--dg:#f87171;--dgb:#2b1a1c;--wn:#fcd34d;--wnb:#33290c;--wd:#fbbf24;--ok:#4ade80;--sh:0 4px 16px rgba(0,0,0,.4);color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#18181b;--surf:#1f1f23;--bd:#323238;--tx:#f4f4f5;--mu:#a1a1aa;--hv:#2a2a30;--chip:#2a2a30;--acl:#818cf8;--sel:#2a2b4a;--dg:#f87171;--dgb:#2b1a1c;--wn:#fcd34d;--wnb:#33290c;--wd:#fbbf24;--ok:#4ade80;--sh:0 4px 16px rgba(0,0,0,.4);color-scheme:dark}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0;overflow:hidden;background:var(--bg)}
+body{display:flex;flex-direction:column;color:var(--tx);font:400 13px/1.5 var(--sans);font-feature-settings:"cv11","ss03"}
+body.compact{--rh:28px}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--acl);outline-offset:2px}
+td:focus-visible{outline-offset:-2px}
+.mu{color:var(--mu)}.sp{flex:1}
+.ic{display:inline-flex;flex:none}
+.warn{flex:none;display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--wnb);color:var(--wn);border-bottom:1px solid var(--bd);font-weight:500}
+.warn[hidden]{display:none}.warn .wt{flex:1}
+#side .fb{padding:0 8px 8px}#imp{width:100%;justify-content:center}
+.rz{position:absolute;top:0;right:0;bottom:0;width:8px;cursor:col-resize;touch-action:none}
+.rz:hover,.rz:focus-visible{background:var(--bd)}.rz:focus-visible{outline-offset:-2px}
+#foot{flex:none;height:32px;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:0 12px;background:var(--surf);border-top:1px solid var(--bd);font-size:12px;color:var(--mu);white-space:nowrap;overflow:hidden}
+#foot span:first-child{overflow:hidden;text-overflow:ellipsis}
+#foot a{color:var(--tx);font-weight:600;text-decoration:underline;text-underline-offset:2px}#foot a:hover{color:var(--acl)}
+#top{height:40px;flex:none;display:flex;align-items:center;gap:8px;padding:0 12px;background:var(--surf);border-bottom:1px solid var(--bd);overflow:hidden}
+.word{font-size:20px;line-height:1;font-weight:700;letter-spacing:-.02em;margin:0 8px}
+.meta{font-size:12px;color:var(--mu);white-space:nowrap;font-variant-numeric:tabular-nums}
+#status{min-width:0;overflow:hidden;text-overflow:ellipsis}
+.dirty{display:inline-flex;align-items:center;gap:8px;font-weight:500}
+.dirty[hidden]{display:none}
+.dot{width:8px;height:8px;border-radius:4px;background:var(--wd)}
+.btn{display:inline-flex;align-items:center;gap:8px;height:28px;padding:0 12px;border:1px solid var(--bd);border-radius:6px;background:var(--surf);cursor:pointer;white-space:nowrap;font-weight:500}
+.btn:hover:not(:disabled){background:var(--hv)}.btn:active:not(:disabled){background:var(--bd)}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.btn.sq{width:28px;padding:0;justify-content:center}
+.btn.pri{background:var(--ac);border-color:var(--ac);color:#fff}
+.btn.pri:hover:not(:disabled){background:#4338ca}.btn.pri:active:not(:disabled){background:#3730a3}
+.btn.dng{background:#b91c1c;border-color:#b91c1c;color:#fff}.btn.dng:hover:not(:disabled){background:#991b1b}
+.seg{display:inline-flex;gap:4px}
+.seg .btn[aria-pressed=true]{background:var(--bd);font-weight:600}
+input.in,select.in{height:28px;width:100%;padding:0 8px;border:1px solid var(--bd);border-radius:6px;background:var(--surf)}
+input.in::placeholder{color:var(--mu)}
+input.in:disabled{opacity:.5}
+#app{flex:1;min-height:0;display:flex;position:relative}
+#side{width:224px;flex:none;display:flex;flex-direction:column;background:var(--surf);border-right:1px solid var(--bd)}
+.collapsed #side{display:none}
+#side .f{padding:8px}
+.list{flex:1;overflow:auto;padding:0 8px 8px}
+.grp{padding:8px 8px 4px;font-size:12px;font-weight:500;color:var(--mu)}
+.item{display:flex;align-items:center;gap:8px;width:100%;height:32px;padding:0 8px;border:0;border-radius:6px;background:none;cursor:pointer;text-align:left}
+.item:hover{background:var(--hv)}.item[aria-current=true]{background:var(--sel);font-weight:500}
+.item .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.item .ct{font-size:12px;color:var(--mu);font-variant-numeric:tabular-nums}
+@media (max-width:1000px){#side{position:absolute;top:0;bottom:0;left:0;z-index:5}}
+#main{flex:1;min-width:0;display:flex;flex-direction:column}
+body.dragging #main{outline:2px dashed var(--mu);outline-offset:-8px}
+#tabs{flex:none;display:flex;background:var(--surf);border-bottom:1px solid var(--bd);overflow-x:auto}
+#tabs:empty{display:none}
+.tab{display:flex;align-items:center;height:32px;padding:0 4px 0 0;border-bottom:2px solid transparent;white-space:nowrap}
+.tab.on{border-bottom-color:var(--acl)}.tab.on .tb{font-weight:600}
+.tab button{height:100%;border:0;background:none;cursor:pointer;display:flex;align-items:center;gap:8px}
+.tab .tb{padding:0 8px 0 12px;font-weight:500}.tab .tb:hover,.tab .cl:hover{background:var(--hv)}
+.tab .cl{width:24px;justify-content:center;border-radius:4px}
+#panel{flex:1;min-height:0;display:flex}
+.pcol{flex:1;min-width:0;display:flex;flex-direction:column}
+.bar{flex:none;display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--surf);border-bottom:1px solid var(--bd);flex-wrap:wrap}
+.bar.foot{border-bottom:0;border-top:1px solid var(--bd)}
+.badge{padding:0 8px;border-radius:4px;background:var(--wnb);color:var(--wn);font-size:12px;font-weight:600}
+.grid{flex:1;min-height:0;overflow:auto;background:var(--surf)}
+table.g{border-collapse:separate;border-spacing:0;table-layout:fixed}
+.g th,.g td{height:var(--rh);padding:0 8px;border-bottom:1px solid var(--bd);border-right:1px solid var(--bd);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:left;font-weight:400;position:relative}
+.g td{font-variant-numeric:tabular-nums}
+.g td.num{text-align:right}
+.g td.rid{color:var(--mu)}
+.g thead th{position:sticky;background:var(--surf);z-index:2;font-weight:600}
+.g tr.h th{top:0}.g tr.fl th{top:var(--rh);padding:0 4px}
+.g tbody tr:hover td{background:var(--hv)}
+.g tbody tr[aria-selected=true] td{background:var(--sel)}
+.g td.open{white-space:pre-wrap;word-break:break-all}
+.g td.xp{padding-right:32px}
+.g td .x{position:absolute;right:4px;top:2px;width:24px;height:24px;display:flex;align-items:center;justify-content:center;border:1px solid var(--bd);border-radius:4px;background:var(--surf);cursor:pointer}
+.g td .x:hover{background:var(--hv)}
+.g td.editing{padding:0 4px}
+.edw{display:flex;gap:4px;align-items:center;height:calc(var(--rh) - 2px)}
+.edw .in{height:24px}.edw .btn{height:24px;padding:0 8px}
+.sort{display:flex;align-items:center;gap:8px;width:100%;height:calc(var(--rh) - 1px);border:0;background:none;cursor:pointer;padding:0;text-align:left}
+.sort:hover{color:var(--acl)}
+.sort .n{font-weight:600;overflow:hidden;text-overflow:ellipsis}
+.sort .t{font-size:12px;font-weight:400;color:var(--mu)}
+.fl .fc{display:flex;gap:4px}.fl .in{height:24px}.fl select.in{width:88px;flex:none;padding:0 4px}
+.chip{display:inline-block;padding:0 4px;border-radius:4px;font:italic 400 12px/1.45 var(--sans);background:var(--chip);color:var(--mu)}
+.chip.e{font-style:normal;background:none;border:1px dashed var(--mu)}
+.chip.pk{font-style:normal;font-weight:600}
+button.chip.b{font-style:normal;font-weight:500;border:1px solid var(--bd);cursor:pointer;color:var(--tx)}
+button.chip.b:hover{background:var(--bd)}
+.hex{margin-top:4px;font-size:12px;color:var(--mu);white-space:normal;word-break:break-all}
+.empty{padding:32px;text-align:center;color:var(--mu);position:sticky;left:0;display:flex;flex-direction:column;align-items:center;gap:16px}
+#side .empty{padding:16px}
+.drop{margin:auto;width:min(480px,calc(100% - 32px));padding:32px;border:1px dashed var(--mu);border-radius:6px;background:var(--surf);display:flex;flex-direction:column;align-items:center;gap:16px;text-align:center}
+.drop p{margin:0}
+.drop .dt{font-size:15px;font-weight:500}
+.err{padding:12px;border:1px solid var(--dg);border-radius:6px;background:var(--dgb);color:var(--dg);white-space:pre-wrap;text-align:left;width:100%;font-weight:500}
+.err[hidden]{display:none}.db .err{margin-top:12px}
+.okb{padding:12px;border:1px solid var(--bd);border-radius:6px;color:var(--ok);font-weight:500}
+#det{width:320px;flex:none;display:flex;flex-direction:column;background:var(--surf);border-left:1px solid var(--bd)}
+#det[hidden]{display:none}
+.dhd{display:flex;align-items:center;justify-content:space-between;padding:8px 16px;border-bottom:1px solid var(--bd)}
+h2.t2,h3.t2{margin:0;font-size:15px;font-weight:600;letter-spacing:-.01em}
+.dbody{overflow:auto;padding:16px;display:flex;flex-direction:column;gap:16px}
+.cp{display:flex;gap:8px;flex-wrap:wrap}
+.fl{font-size:12px;color:var(--mu)}.fl b{color:var(--tx);font-weight:600}
+.val{white-space:pre-wrap;word-break:break-all}
+.pw{position:relative}
+.pop{position:absolute;top:32px;left:0;z-index:10;min-width:176px;padding:4px;display:flex;flex-direction:column;background:var(--surf);border:1px solid var(--bd);border-radius:6px;box-shadow:var(--sh)}
+.pop[hidden]{display:none}
+.pop button:not(.btn){height:32px;padding:0 8px;border:0;border-radius:4px;background:none;text-align:left;cursor:pointer}
+.pop button:not(.btn):hover,.pop label:hover{background:var(--hv)}
+.pop label{display:flex;gap:8px;align-items:center;height:32px;padding:0 8px;border-radius:4px;cursor:pointer}
+.pop .btn{margin:4px}
+.sqlp{flex:1;min-width:0;display:flex;flex-direction:column;padding:12px;gap:12px;overflow:hidden}
+.sqled{width:100%;height:160px;min-height:96px;resize:vertical;padding:12px;border:1px solid var(--bd);border-radius:6px;background:var(--surf);font:400 13px/1.5 var(--sans);flex:none}
+.sqres{flex:1;min-height:0;overflow:auto;display:flex;flex-direction:column;gap:12px}
+.rwrap{overflow:auto;border:1px solid var(--bd);border-radius:6px;background:var(--surf);flex:none;max-height:100%}
+.rl{display:flex;align-items:center;gap:8px;margin-bottom:8px;font-weight:500}
+.hist{flex:none;max-height:128px;overflow:auto;border:1px solid var(--bd);border-radius:6px;background:var(--surf)}
+.hist button{display:block;width:100%;height:32px;padding:0 8px;border:0;border-bottom:1px solid var(--bd);background:none;text-align:left;cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hist button:hover{background:var(--hv)}
+.strw{flex:1;overflow:auto;padding:16px;display:flex;flex-direction:column;gap:24px}
+pre.ddl{margin:0;padding:12px;border:1px solid var(--bd);border-radius:6px;background:var(--surf);font:400 13px/1.5 var(--sans);white-space:pre-wrap}
+table.st{border-collapse:collapse;width:100%;background:var(--surf)}
+.st th,.st td{height:32px;padding:0 8px;border:1px solid var(--bd);text-align:left;font-weight:400}
+.st th{color:var(--mu);font-size:12px;font-weight:500}
+dialog.dlg{border:1px solid var(--bd);border-radius:6px;background:var(--surf);color:var(--tx);padding:0;width:min(480px,calc(100% - 32px));box-shadow:var(--sh)}
+dialog::backdrop{background:rgba(0,0,0,.4)}
+.dlg .dh{padding:16px 16px 0;margin:0;font-size:15px;font-weight:600;letter-spacing:-.01em}
+.dlg .db{padding:16px;max-height:60vh;overflow:auto}
+.dlg .db p{margin:0}
+.dlg .df{display:flex;justify-content:flex-end;gap:8px;padding:12px 16px;border-top:1px solid var(--bd)}
+.ff{display:grid;grid-template-columns:1fr auto;gap:4px 8px;margin-bottom:12px}
+.ff label.n{grid-column:1/3;font-size:12px;color:var(--mu)}
+.ff label.n b{color:var(--tx);font-weight:600}
+.chk{display:flex;align-items:center;gap:4px;font-size:12px;white-space:nowrap}
+#toasts{position:fixed;right:16px;bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:50;display:flex;flex-direction:column;gap:8px;width:min(320px,calc(100% - 32px))}
+.toast{padding:8px 12px;border:1px solid var(--bd);border-left-width:4px;border-radius:6px;background:var(--surf);font-weight:500}
+.toast.success{border-left-color:var(--ok)}.toast.error{border-left-color:var(--dg)}.toast.warn{border-left-color:var(--wd)}
+@media (prefers-reduced-motion:no-preference){.btn,.item{transition:background-color .1s}}
+</style>
+</head>
+<body>
+<header id="top">
+  <button class="btn sq" id="sb" aria-label="Toggle sidebar" title="Toggle sidebar"><span data-ic="panel"></span></button>
+  <span class="word">Tablewright</span>
+  <button class="btn" id="open"><span data-ic="open"></span>Open file</button>
+  <button class="btn" id="new"><span data-ic="plus"></span>New database</button>
+  <button class="btn" id="dl" disabled><span data-ic="download"></span>Download database</button>
+  <span class="meta dirty" id="dirty" hidden><i class="dot"></i>Unsaved changes</span>
+  <span class="sp"></span>
+  <span class="meta" id="status"></span>
+  <button class="btn sq" id="dens" aria-label="Toggle compact rows" title="Toggle compact rows"><span data-ic="rows"></span></button>
+  <button class="btn sq" id="help" aria-label="Keyboard shortcuts" title="Keyboard shortcuts"><span data-ic="help"></span></button>
+  <button class="btn sq" id="theme"></button>
+</header>
+<div id="warn" class="warn" role="note" hidden><span data-ic="alert"></span><span class="wt">Tablewright works best on screens at least 768 px wide. On this screen, wide tables and cell editing are hard to use, so open it on a tablet, laptop or desktop for the best experience.</span><button class="btn" id="warnx">Dismiss</button></div>
+<div id="app">
+  <aside id="side">
+    <div class="f"><input class="in" id="sq" type="search" placeholder="Filter tables" aria-label="Filter tables" disabled></div>
+    <div class="fb"><button class="btn" id="imp" disabled><span data-ic="upload"></span>Import CSV</button></div>
+    <div class="list" id="list"></div>
+  </aside>
+  <main id="main"><div id="tabs" role="tablist" aria-label="Open tabs"></div><section id="panel"></section></main>
+</div>
+<footer id="foot"><span>Tablewright 1.1.0 · Runs in your browser, nothing is uploaded</span><span>Best, <a href="https://discord.com/users/929998586375180288" target="_blank" rel="noopener noreferrer" title="Message @drnx64 on Discord">@drnx64</a></span></footer>
+<div id="toasts" aria-live="polite"></div>
+<input type="file" id="file" hidden accept=".db,.sqlite,.sqlite3,.db3,application/vnd.sqlite3,application/x-sqlite3">
+<input type="file" id="csv" hidden accept=".csv,text/csv">
+
+<script type="module">
+const CDN = 'https://cdn.jsdelivr.net/npm/sql.js@1.10.3/dist/';
+
+/* ---------- helpers ---------- */
+const $ = s => document.querySelector(s);
+const h = (tag, attrs = {}, ...kids) => {
+  const e = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) {
+    if (v == null || v === false) continue;
+    if (k.startsWith('on')) e.addEventListener(k.slice(2), v);
+    else if (k === 'class') e.className = v;
+    else e.setAttribute(k, v === true ? '' : v);
+  }
+  e.append(...kids.flat().filter(x => x != null && x !== false));
+  return e;
+};
+// SQL escaping: identifiers are double-quoted with embedded quotes doubled; values are always bound parameters.
+const qi = n => '"' + String(n).replace(/"/g, '""') + '"';
+const errMsg = e => (e && e.message) || String(e);
+const fmtN = n => Number(n).toLocaleString('en-US');
+const fmtB = n => n < 1024 ? `${n} B` : n < 1048576 ? `${(n / 1024).toFixed(1)} KB` : `${(n / 1048576).toFixed(1)} MB`;
+const hexOf = (v, n) => [...v.slice(0, n)].map(b => b.toString(16).padStart(2, '0')).join(' ') + (v.length > n ? ' …' : '');
+const plain = v => v instanceof Uint8Array ? hexOf(v, v.length) : v;
+const numKind = t => /INT/i.test(t) ? 'int' : /REAL|FLOA|DOUB|NUM|DEC/i.test(t) ? 'real' : null;
+const isRidAlias = (c, m) => c.pk === 1 && m.cols.filter(x => x.pk).length === 1 && /^integer$/i.test(c.type);
+// Text for the clipboard only (never executed by the app).
+const sqlLit = v => v === null ? 'NULL' : typeof v === 'number' ? String(v) : v instanceof Uint8Array ? `X'${v.reduce((s, b) => s + b.toString(16).padStart(2, '0'), '')}'` : `'${String(v).replace(/'/g, "''")}'`;
+
+const P = { // Lucide-style paths, 24x24, 1.5px stroke
+  open: '<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>',
+  download: '<path d="M12 4v11m0 0-4-4m4 4 4-4M5 19h14"/>',
+  sun: '<circle cx="12" cy="12" r="4"/><path d="M12 3v2m0 14v2M3 12h2m14 0h2M5.6 5.6 7 7m10 10 1.4 1.4M5.6 18.4 7 17M17 7l1.4-1.4"/>',
+  moon: '<path d="M20 14.5A8 8 0 0 1 9.5 4 8 8 0 1 0 20 14.5z"/>',
+  x: '<path d="M6 6l12 12M18 6 6 18"/>', plus: '<path d="M12 5v14M5 12h14"/>',
+  copy: '<rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a1 1 0 0 1 1-1h10"/>',
+  trash: '<path d="M4 7h16M10 11v6m4-6v6M6 7l1 12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-12M9 7V4h6v3"/>',
+  left: '<path d="m15 6-6 6 6 6"/>', right: '<path d="m9 6 6 6-6 6"/>',
+  down: '<path d="m6 9 6 6 6-6"/>', up: '<path d="m6 15 6-6 6 6"/>',
+  play: '<path d="M7 5v14l12-7z"/>', table: '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M9 10v10"/>',
+  eye: '<path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>',
+  panel: '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16"/>',
+  terminal: '<path d="m5 8 4 4-4 4M12 17h7"/>',
+  rows: '<path d="M4 6h16M4 12h16M4 18h16"/>',
+  cols: '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16M15 4v16"/>',
+  refresh: '<path d="M20 11a8 8 0 1 0-2.3 5.7M20 5v6h-6"/>',
+  help: '<circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.7.3-1 .9-1 1.7M12 17h.01"/>',
+  upload: '<path d="M12 16V5m0 0-4 4m4-4 4 4M5 19h14"/>',
+  alert: '<path d="M12 4 3 20h18L12 4zM12 10v4m0 3h.01"/>'
+};
+const ic = n => {
+  const s = h('span', { class: 'ic', 'aria-hidden': 'true' });
+  s.innerHTML = `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">${P[n]}</svg>`;
+  return s;
+};
+const btn = (label, icon, fn, disabled) => h('button', { class: 'btn', disabled, onclick: fn }, icon && ic(icon), label);
+
+function toast(msg, kind = 'info') {
+  const t = h('div', { class: 'toast ' + kind, role: kind === 'error' ? 'alert' : 'status' }, msg);
+  $('#toasts').append(t);
+  setTimeout(() => t.remove(), kind === 'error' ? 7000 : 4000);
+}
+const fail = (what, e, next) => toast(`${what}: ${errMsg(e)}. ${next}`, 'error');
+async function copy(text) {
+  try { await navigator.clipboard.writeText(text); toast('Copied to clipboard', 'success'); }
+  catch (e) { fail('Copy failed', e, 'Select the text and copy it manually'); }
+}
+
+function modal(title, body, actions, cancelLabel = 'Cancel') {
+  return new Promise(res => {
+    const d = h('dialog', { class: 'dlg', 'aria-label': title });
+    const err = h('div', { class: 'err', role: 'alert', hidden: true });
+    const close = r => { res(r); d.close(); };
+    const btns = actions.map(a => {
+      const b = h('button', { class: 'btn ' + (a.kind || 'pri') }, a.label);
+      b.addEventListener('click', async () => {
+        b.disabled = true;
+        try { close(await a.run()); }
+        catch (x) { err.textContent = `${errMsg(x)}. Fix the value or cancel.`; err.hidden = false; b.disabled = false; }
+      });
+      return b;
+    });
+    d.append(h('h2', { class: 'dh' }, title), h('div', { class: 'db' }, body, err),
+      h('div', { class: 'df' }, h('button', { class: 'btn', onclick: () => close(false) }, cancelLabel), ...btns));
+    d.addEventListener('close', () => { res(false); d.remove(); });
+    d.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.tagName === 'INPUT' && e.target.type !== 'checkbox') d.querySelector('.pri')?.click(); });
+    document.body.append(d); d.showModal();
+  });
+}
+const confirmBox = (title, text, ok, danger) => modal(title, h('p', {}, text), [{ label: ok, kind: danger ? 'dng' : 'pri', run: () => true }]);
+const guardDirty = ok => !S.dirty || confirmBox('Discard unsaved changes', 'This replaces the open database and discards your edits. Download the database first to keep them.', ok, true);
+
+/* ---------- state ---------- */
+const store = { get(k, d) { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch { return d; } }, set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch { /* storage unavailable */ } } };
+const S = { SQL: null, db: null, name: '', size: 0, dirty: false, edited: false, tables: [], tabs: [], active: 'sql', sideQ: '', loadErr: '',
+  sql: { text: 'SELECT name, type FROM sqlite_master;', results: [], err: '', msg: '', ms: null, history: store.get('tw-history', []) } };
+
+// Engine load: the asm.js build needs no WASM fetch, which keeps it working under a strict content-security policy.
+let enginePromise;
+function loadEngine() {
+  return enginePromise ??= new Promise((res, rej) => {
+    const s = document.createElement('script');
+    s.src = CDN + 'sql-asm.js';
+    s.onload = () => window.initSqlJs().then(res, rej);
+    s.onerror = () => rej(new Error('The SQLite engine could not be downloaded'));
+    document.head.append(s);
+  }).catch(e => { enginePromise = null; throw e; });
+}
+
+function all(sql, p = []) {
+  const st = S.db.prepare(sql);
+  try { st.bind(p); const rows = []; while (st.step()) rows.push(st.get()); return { cols: st.getColumnNames(), rows }; }
+  finally { st.free(); }
+}
+function run(sql, p = []) {
+  const st = S.db.prepare(sql);
+  try { st.bind(p); st.step(); } finally { st.free(); }
+  markDirty();
+}
+function markDirty() { S.dirty = S.edited = true; syncChrome(); }
+
+function readSchema() {
+  const { rows } = all("SELECT name,type,sql FROM sqlite_master WHERE type IN ('table','view') AND name NOT LIKE 'sqlite\\_%' ESCAPE '\\' ORDER BY type,name");
+  S.tables = rows.map(([name, type, sql]) => {
+    const ro = type === 'view' || /without\s+rowid/i.test(sql || '');
+    let count = 0;
+    try { count = all(`SELECT COUNT(*) FROM ${qi(name)}`).rows[0][0]; } catch { /* broken view: show 0 */ }
+    return { name, type, sql, ro, count, why: type === 'view' ? 'Views have no rowid, so rows cannot be edited' : 'WITHOUT ROWID tables have no rowid, so rows cannot be edited here' };
+  });
+  S.tabs = S.tabs.filter(t => S.tables.some(x => x.name === t.name));
+  if (S.active !== 'sql' && !S.tabs.some(t => t.id === S.active)) S.active = 'sql';
+  S.tabs.forEach(t => t.meta = null);
+}
+function ensureMeta(t) {
+  if (t.meta) return t.meta;
+  const info = S.tables.find(x => x.name === t.name);
+  const cols = all(`PRAGMA table_info(${qi(t.name)})`).rows.map(([, name, type, nn, df, pk]) => ({ name, type: type || '', nn, df, pk }));
+  return t.meta = { cols, info };
+}
+function openTab(name) {
+  if (!S.tabs.some(x => x.id === name)) S.tabs.push({ id: name, name, page: 0, size: 100, sort: null, filters: {}, hidden: new Set(), w: {}, view: 'data', sel: null, rows: [], total: 0, meta: null });
+  S.active = name;
+}
+function closeTab(id) {
+  const i = S.tabs.findIndex(t => t.id === id);
+  S.tabs.splice(i, 1);
+  if (S.active === id) S.active = S.tabs[i]?.id || S.tabs[i - 1]?.id || 'sql';
+  render();
+}
+
+/* ---------- loading and saving ---------- */
+function adopt(db, name, size) {
+  S.db?.close();
+  Object.assign(S, { db, name, size, dirty: false, edited: false, tabs: [], active: 'sql', loadErr: '' });
+  Object.assign(S.sql, { results: [], err: '', msg: '', ms: null });
+  readSchema();
+  if (S.tables[0]) openTab(S.tables[0].name);
+  render();
+}
+async function loadFile(file) {
+  try {
+    if (!(await guardDirty('Discard and open'))) return;
+    const SQL = await loadEngine();
+    const db = new SQL.Database(new Uint8Array(await file.arrayBuffer()));
+    try { db.exec('SELECT count(*) FROM sqlite_master'); }
+    catch { db.close(); throw new Error('The file is not a valid SQLite database'); }
+    adopt(db, file.name, file.size);
+  } catch (e) {
+    const msg = `Could not open ${file.name}: ${errMsg(e)}. Choose a valid .db or .sqlite file.`;
+    if (S.db) toast(msg, 'error'); else { S.loadErr = msg; render(); }
+  }
+}
+async function newDb() {
+  try {
+    if (!(await guardDirty('Discard and create'))) return;
+    const SQL = await loadEngine();
+    S.sql.text = 'CREATE TABLE notes (\n  id INTEGER PRIMARY KEY,\n  title TEXT NOT NULL,\n  body TEXT\n);\nINSERT INTO notes (title, body) VALUES (\'First note\', \'Edit me in the table view\');';
+    adopt(new SQL.Database(), 'untitled.db', 0);
+    toast('New empty database created. Run the starter query to add a table.', 'success');
+  } catch (e) { fail('Could not create a database', e, 'Check your connection and try again'); }
+}
+function save(blob, name) {
+  const a = h('a', { href: URL.createObjectURL(blob), download: name });
+  document.body.append(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+function download() {
+  if (!S.db) return;
+  try {
+    const data = S.db.export();
+    save(new Blob([data], { type: 'application/vnd.sqlite3' }), S.edited && !S.name.startsWith('edited-') ? `edited-${S.name}` : S.name);
+    S.dirty = false; S.size = data.length; syncChrome(); toast('Database downloaded', 'success');
+  } catch (e) { fail('Download failed', e, 'Try again after closing large tabs'); }
+}
+const csvCell = v => {
+  if (v == null) return '';
+  const s = String(plain(v));
+  return /[",\r\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+};
+const saveCsv = (cols, rows, name) => save(new Blob([[cols, ...rows].map(r => r.map(csvCell).join(',')).join('\r\n')], { type: 'text/csv' }), name);
+function exportTable(t, fmt) {
+  try {
+    const { sql: w, p } = whereOf(t);
+    const { cols, rows } = all(`SELECT * FROM ${qi(t.name)}${w}${orderOf(t)}`, p);
+    if (fmt === 'csv') saveCsv(cols, rows, `${t.name}.csv`);
+    else save(new Blob([JSON.stringify(rows.map(r => Object.fromEntries(cols.map((c, i) => [c, plain(r[i])]))), null, 2)], { type: 'application/json' }), `${t.name}.json`);
+    toast(`Exported ${fmtN(rows.length)} rows as ${fmt.toUpperCase()}`, 'success');
+  } catch (e) { fail('Export failed', e, 'Check the filters and try again'); }
+}
+
+/* ---------- querying ---------- */
+function whereOf(t) {
+  const cols = ensureMeta(t).cols, parts = [], p = [];
+  for (const [i, f] of Object.entries(t.filters)) {
+    const q = qi(cols[i].name);
+    if (f.op === 'null') parts.push(`${q} IS NULL`);
+    else if (f.op === 'eq') { parts.push(`CAST(${q} AS TEXT) = ?`); p.push(f.v); }
+    else { parts.push(`CAST(${q} AS TEXT) LIKE ? ESCAPE '\\'`); p.push('%' + f.v.replace(/[\\%_]/g, '\\$&') + '%'); }
+  }
+  return { sql: parts.length ? ' WHERE ' + parts.join(' AND ') : '', p };
+}
+const orderOf = t => t.sort ? ` ORDER BY ${qi(ensureMeta(t).cols[t.sort.i].name)} ${t.sort.dir === 'desc' ? 'DESC' : 'ASC'}` : '';
+function loadRows(t) {
+  const m = ensureMeta(t), { sql: w, p } = whereOf(t), T = qi(t.name);
+  t.total = all(`SELECT COUNT(*) FROM ${T}${w}`, p).rows[0][0];
+  t.page = Math.max(0, Math.min(t.page, Math.ceil(t.total / t.size) - 1));
+  // rowid strategy: rowid tables expose rowid as __rid for UPDATE/DELETE; views and WITHOUT ROWID get NULL and are read-only.
+  t.rows = all(`SELECT ${m.info.ro ? 'NULL' : 'rowid'} AS __rid, * FROM ${T}${w}${orderOf(t)} LIMIT ? OFFSET ?`, [...p, t.size, t.page * t.size]).rows;
+  t.sel = null;
+}
+function recount(t) { const x = S.tables.find(a => a.name === t.name); x.count = all(`SELECT COUNT(*) FROM ${qi(t.name)}`).rows[0][0]; renderSide(); }
+
+/* ---------- cell rendering ---------- */
+function fillCell(td, v) {
+  td.replaceChildren(); td.classList.remove('open', 'xp');
+  td.classList.toggle('num', typeof v === 'number' || typeof v === 'bigint');
+  if (v === null) td.append(h('span', { class: 'chip' }, 'NULL'));
+  else if (v instanceof Uint8Array) {
+    const hex = h('div', { class: 'hex', hidden: true }, hexOf(v, 256));
+    const chip = h('button', { class: 'chip b', 'aria-expanded': 'false', onclick: e => {
+      e.stopPropagation(); const o = td.classList.toggle('open'); chip.setAttribute('aria-expanded', String(o)); hex.hidden = !o;
+    } }, `<blob · ${fmtB(v.length)}>`);
+    td.append(chip, hex);
+  } else if (v === '') td.append(h('span', { class: 'chip e' }, 'empty'));
+  else {
+    const s = String(v); td.append(s);
+    if (s.length > 60) {
+      td.classList.add('xp');
+      const x = h('button', { class: 'x', 'aria-label': 'Expand value', 'aria-expanded': 'false', onclick: e => {
+        e.stopPropagation(); x.setAttribute('aria-expanded', String(td.classList.toggle('open')));
+      } }, ic('down'));
+      td.append(x);
+    }
+  }
+}
+function valueBox(v) {
+  if (v === null) return h('span', { class: 'chip' }, 'NULL');
+  if (v === '') return h('span', { class: 'chip e' }, 'empty');
+  if (v instanceof Uint8Array) return h('div', {}, h('div', { class: 'val' }, `<blob · ${fmtB(v.length)}>`), h('div', { class: 'hex' }, hexOf(v, 512)));
+  return h('div', { class: 'val' }, String(v));
+}
+
+/* ---------- table view ---------- */
+function tableView(t) {
+  let m;
+  try { m = ensureMeta(t); } catch (e) { return [h('div', { class: 'pcol' }, h('div', { class: 'empty' }, h('div', { class: 'err' }, `${errMsg(e)}. Close this tab and reopen the table.`)))]; }
+  const ro = m.info.ro, cols = m.cols, T = qi(t.name);
+  const seg = h('div', { class: 'seg', role: 'group', 'aria-label': 'View' },
+    ...[['data', 'Data'], ['structure', 'Structure']].map(([v, l]) => h('button', { class: 'btn', 'aria-pressed': String(t.view === v), onclick: () => { t.view = v; renderPanel(); } }, l)));
+  const queryBtn = btn('Query table', 'terminal', () => { S.sql.text = `SELECT * FROM ${T} LIMIT 100;`; S.active = 'sql'; render(); $('.sqled')?.focus(); });
+  if (t.view === 'structure') return [h('div', { class: 'pcol' }, h('div', { class: 'bar' }, seg, queryBtn), structureView(t))];
+
+  const det = h('aside', { id: 'det', hidden: true, 'aria-label': 'Row details' });
+  const add = btn('Add row', 'plus', () => addRow(t), ro);
+  const dup = btn('Duplicate row', 'copy', () => dupRow(t), true);
+  const del = btn('Delete row', 'trash', () => delRow(t), true);
+  const hs = h('style');
+  const colPop = h('div', { class: 'pop', hidden: true, style: 'max-height:320px;overflow:auto' },
+    ...cols.map((c, i) => h('label', {}, h('input', { type: 'checkbox', checked: !t.hidden.has(i), onchange: e => { e.target.checked ? t.hidden.delete(i) : t.hidden.add(i); applyHidden(); } }), c.name)),
+    btn('Show all', null, () => { t.hidden.clear(); colPop.querySelectorAll('input').forEach(x => x.checked = true); applyHidden(); }),
+    btn('Reset widths', null, () => { t.w = {}; applyHidden(); }));
+  const colsMenu = h('div', { class: 'pw' }, btn('Columns', 'cols', () => { colPop.hidden = !colPop.hidden; }), colPop);
+  const pop = h('div', { class: 'pop', hidden: true }, h('button', { onclick: () => { pop.hidden = true; exportTable(t, 'csv'); } }, 'Export as CSV'), h('button', { onclick: () => { pop.hidden = true; exportTable(t, 'json'); } }, 'Export as JSON'));
+  const exp = h('div', { class: 'pw' }, btn('Export', 'down', () => { pop.hidden = !pop.hidden; }), pop);
+  const bar = h('div', { class: 'bar' }, seg, add, dup, del, colsMenu, exp, queryBtn, btn('Refresh', 'refresh', () => refresh()),
+    ro && h('span', { class: 'badge', title: m.info.why }, 'Read-only'), ro && h('span', { class: 'mu' }, m.info.why));
+
+  const hr = h('tr', { class: 'h' }), tbody = h('tbody'), empty = h('div', { class: 'empty' });
+  const fr = h('tr', { class: 'fl' });
+  if (!ro) fr.append(h('th'));
+  cols.forEach((c, i) => {
+    const f = t.filters[i] || { op: 'has', v: '' };
+    const inp = h('input', { class: 'in', type: 'search', placeholder: 'Filter', 'aria-label': `Filter ${c.name}`, disabled: f.op === 'null' });
+    inp.value = f.v;
+    const sel = h('select', { class: 'in', 'aria-label': `Filter mode for ${c.name}` }, ...[['has', 'contains'], ['eq', 'equals'], ['null', 'is null']].map(([v, l]) => h('option', { value: v, selected: f.op === v }, l)));
+    let timer;
+    const apply = () => {
+      inp.disabled = sel.value === 'null';
+      if (sel.value === 'null' || inp.value !== '') t.filters[i] = { op: sel.value, v: inp.value }; else delete t.filters[i];
+      t.page = 0; clearTimeout(timer); timer = setTimeout(refresh, 250);
+    };
+    inp.addEventListener('input', apply); sel.addEventListener('change', apply);
+    fr.append(h('th', { 'data-c': i }, h('div', { class: 'fc' }, sel, inp)));
+  });
+  const colgroup = h('colgroup', {}, ...(ro ? [] : [h('col', { style: 'width:80px' })]), ...cols.map((_, i) => h('col', { style: 'width:192px', 'data-c': i })));
+  const table = h('table', { class: 'g' }, colgroup, h('thead', {}, hr, fr), tbody);
+  const grid = h('div', { class: 'grid', id: 'gx' }, hs, table, empty);
+  // Hidden columns: one scoped style rule per column keeps header, filter, colgroup and cells in sync.
+  const W = i => t.w[i] || 192;
+  const setW = (i, v, reset) => { if (reset) delete t.w[i]; else t.w[i] = Math.max(64, Math.min(800, Math.round(v))); applyHidden(); };
+  // Column resize handle: pointer drag, double-click to reset, arrow keys when focused.
+  function resizer(i, name) {
+    const rz = h('span', { class: 'rz', role: 'separator', 'aria-orientation': 'vertical', 'aria-label': `Resize ${name} column`, tabindex: 0, title: 'Drag to resize, double-click to reset' });
+    rz.addEventListener('pointerdown', e => {
+      e.preventDefault(); e.stopPropagation(); rz.setPointerCapture(e.pointerId);
+      const x0 = e.clientX, w0 = W(i), mv = ev => setW(i, w0 + ev.clientX - x0), up = () => { rz.removeEventListener('pointermove', mv); rz.removeEventListener('pointerup', up); };
+      rz.addEventListener('pointermove', mv); rz.addEventListener('pointerup', up);
+    });
+    rz.addEventListener('dblclick', () => setW(i, 0, true));
+    rz.addEventListener('click', e => e.stopPropagation());
+    rz.addEventListener('keydown', e => { if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') { e.preventDefault(); setW(i, W(i) + (e.key === 'ArrowRight' ? 16 : -16)); } });
+    return rz;
+  }
+  function applyHidden() {
+    hs.textContent = [...t.hidden].map(i => `#gx [data-c="${i}"],#gx td[data-j="${i}"]{display:none}`).join('');
+    colgroup.querySelectorAll('col[data-c]').forEach(c => { c.style.width = W(+c.dataset.c) + 'px'; });
+    table.style.width = ((ro ? 0 : 80) + cols.reduce((s, _, i) => s + (t.hidden.has(i) ? 0 : W(i)), 0)) + 'px';
+  }
+  applyHidden();
+
+  const sizeSel = h('select', { class: 'in', style: 'width:80px', 'aria-label': 'Rows per page', onchange: () => { t.size = +sizeSel.value; t.page = 0; refresh(); } },
+    ...[50, 100, 250, 500].map(n => h('option', { value: n, selected: t.size === n }, n)));
+  const info = h('span', { style: 'font-weight:500;font-variant-numeric:tabular-nums' }), prev = h('button', { class: 'btn sq', 'aria-label': 'Previous page', onclick: () => { t.page--; refresh(); } }, ic('left'));
+  const next = h('button', { class: 'btn sq', 'aria-label': 'Next page', onclick: () => { t.page++; refresh(); } }, ic('right'));
+  const foot = h('div', { class: 'bar foot' }, h('span', { class: 'mu' }, 'Rows per page'), sizeSel, h('span', { class: 'sp' }), info, prev, next);
+
+  function paintHead() {
+    hr.replaceChildren(...(ro ? [] : [h('th', {}, 'rowid')]), ...cols.map((c, i) => {
+      const on = t.sort?.i === i;
+      return h('th', { 'data-c': i, 'aria-sort': on ? (t.sort.dir === 'asc' ? 'ascending' : 'descending') : 'none' },
+        h('button', { class: 'sort', 'data-i': i, title: `Sort by ${c.name}`, onclick: () => cycle(i) },
+          h('span', { class: 'n' }, c.name), c.type && h('span', { class: 't' }, c.type), c.pk && h('span', { class: 'chip pk' }, 'PK'), on && ic(t.sort.dir === 'asc' ? 'up' : 'down')), resizer(i, c.name));
+    }));
+  }
+  const cycle = i => {
+    const s = t.sort;
+    t.sort = !s || s.i !== i ? { i, dir: 'asc' } : s.dir === 'asc' ? { i, dir: 'desc' } : null;
+    t.page = 0; refresh(); hr.querySelector(`[data-i="${i}"]`)?.focus();
+  };
+  function rowEl(r, i) {
+    const tr = h('tr', { 'data-i': i });
+    if (!ro) tr.append(h('td', { class: 'num rid', tabindex: -1 }, String(r[0])));
+    cols.forEach((_, j) => { const td = h('td', { tabindex: -1, 'data-j': j }); fillCell(td, r[j + 1]); tr.append(td); });
+    return tr;
+  }
+  function paint() {
+    paintHead();
+    tbody.replaceChildren(...t.rows.map(rowEl));
+    const first = [...(tbody.firstChild?.querySelectorAll('td[data-j]') || [])].find(x => !t.hidden.has(+x.dataset.j));
+    if (first) first.tabIndex = 0;
+    const filtered = Object.keys(t.filters).length > 0;
+    empty.replaceChildren(); empty.hidden = t.rows.length > 0;
+    if (!t.rows.length) empty.append(filtered ? 'No rows match these filters. Clear a filter to see more.' : 'This table has no rows. Use Add row to insert one.',
+      filtered && btn('Clear filters', null, () => { t.filters = {}; renderPanel(); }));
+    const a = t.total ? t.page * t.size + 1 : 0, b = Math.min((t.page + 1) * t.size, t.total);
+    info.textContent = `${fmtN(a)}–${fmtN(b)} of ${fmtN(t.total)}`;
+    prev.disabled = t.page === 0; next.disabled = b >= t.total;
+    dup.disabled = del.disabled = true; showDetail();
+  }
+  function refresh() {
+    try { loadRows(t); paint(); } catch (e) { fail('Could not read rows', e, 'Clear the filters and try again'); }
+  }
+  t.api = { refresh };
+
+  function focusCell(td) {
+    tbody.querySelectorAll('td[tabindex="0"]').forEach(x => x.tabIndex = -1);
+    td.tabIndex = 0; td.focus(); selectRow(+td.parentNode.dataset.i);
+  }
+  function selectRow(i) {
+    if (t.sel === i) return;
+    tbody.querySelector('tr[aria-selected=true]')?.removeAttribute('aria-selected');
+    tbody.children[i].setAttribute('aria-selected', 'true');
+    t.sel = i; dup.disabled = del.disabled = ro; showDetail();
+  }
+  function showDetail() {
+    det.replaceChildren();
+    if (t.sel == null) { det.hidden = true; return; }
+    det.hidden = false; const r = t.rows[t.sel];
+    const names = cols.map(c => qi(c.name)).join(', ');
+    det.append(h('div', { class: 'dhd' }, h('h2', { class: 't2' }, ro ? 'Row details' : `Row ${r[0]}`),
+      h('button', { class: 'btn sq', 'aria-label': 'Close details', onclick: () => {
+        tbody.querySelector('tr[aria-selected=true]')?.removeAttribute('aria-selected'); t.sel = null; dup.disabled = del.disabled = true; showDetail();
+      } }, ic('x'))),
+      h('div', { class: 'dbody' },
+        h('div', { class: 'cp' },
+          btn('Copy as JSON', 'copy', () => copy(JSON.stringify(Object.fromEntries(cols.map((c, j) => [c.name, plain(r[j + 1])])), null, 2))),
+          btn('Copy as INSERT', 'copy', () => copy(`INSERT INTO ${T} (${names}) VALUES (${cols.map((_, j) => sqlLit(r[j + 1])).join(', ')});`))),
+        ...cols.map((c, j) => h('div', {}, h('div', { class: 'fl' }, h('b', {}, c.name), c.type ? ` · ${c.type}` : ''), valueBox(r[j + 1])))));
+  }
+  function startEdit(td) {
+    if (ro || td.dataset.j == null || td.classList.contains('editing')) return;
+    const tr = td.parentNode, i = +tr.dataset.i, j = +td.dataset.j, c = cols[j], cur = t.rows[i][j + 1];
+    if (cur instanceof Uint8Array) { toast('BLOB values cannot be edited here. Use a SQL query instead.', 'warn'); return; }
+    const kind = numKind(c.type), useNum = kind && (cur == null || typeof cur === 'number');
+    let done = false;
+    const inp = h('input', { class: 'in', type: useNum ? 'number' : 'text', step: kind === 'int' ? '1' : 'any', 'aria-label': `Edit ${c.name}` });
+    inp.value = cur == null ? '' : String(cur);
+    const hiddenCell = n => n && n.dataset.j != null && t.hidden.has(+n.dataset.j);
+    const finish = (mode, move) => {
+      if (done) return; done = true;
+      try {
+        if (mode !== 'cancel') {
+          let v = null;
+          if (mode === 'save') {
+            v = inp.value;
+            if (useNum) { v = v.trim() === '' ? null : Number(v); if (v !== null && !Number.isFinite(v)) throw new Error('Enter a valid number'); }
+          }
+          run(`UPDATE ${T} SET ${qi(c.name)} = ? WHERE rowid = ?`, [v, t.rows[i][0]]);
+          // Re-read the row so coercion and triggers are reflected without re-rendering the grid.
+          const fresh = all(`SELECT rowid AS __rid, * FROM ${T} WHERE rowid = ?`, [t.rows[i][0]]).rows[0];
+          if (fresh) { t.rows[i] = fresh; tr.querySelector('.rid').textContent = fresh[0]; tr.querySelectorAll('td[data-j]').forEach(x => fillCell(x, fresh[+x.dataset.j + 1])); if (t.sel === i) showDetail(); }
+          else refresh();
+        }
+      } catch (e) { fail('Update failed', e, 'Check the value and try again'); }
+      if (td.isConnected) { td.classList.remove('editing'); if (td.firstChild?.className === 'edw') fillCell(td, t.rows[i]?.[j + 1]); td.focus(); }
+      if (move && td.isConnected) {
+        let n = move > 0 ? td.nextElementSibling : td.previousElementSibling;
+        while (hiddenCell(n)) n = move > 0 ? n.nextElementSibling : n.previousElementSibling;
+        if (!n?.dataset.j) n = move > 0 ? tr.nextElementSibling?.querySelector('td[data-j]:not([style])') : tr.previousElementSibling?.querySelector('td[data-j]:last-child');
+        while (hiddenCell(n)) n = move > 0 ? n.nextElementSibling : n.previousElementSibling;
+        if (n) { focusCell(n); startEdit(n); }
+      }
+    };
+    inp.addEventListener('keydown', e => {
+      if (e.key === 'Enter') { e.preventDefault(); finish('save'); }
+      else if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); finish('cancel'); }
+      else if (e.key === 'Tab') { e.preventDefault(); finish('save', e.shiftKey ? -1 : 1); }
+    });
+    inp.addEventListener('blur', () => finish('save'));
+    const nul = h('button', { class: 'btn', type: 'button', onmousedown: e => e.preventDefault(), onclick: () => finish('null') }, 'Set NULL');
+    td.classList.add('editing'); td.replaceChildren(h('div', { class: 'edw' }, inp, nul));
+    inp.focus(); inp.select?.();
+  }
+  tbody.addEventListener('click', e => { const td = e.target.closest('td'); if (td) focusCell(td); });
+  tbody.addEventListener('dblclick', e => { const td = e.target.closest('td'); if (td) startEdit(td); });
+  tbody.addEventListener('keydown', e => {
+    const td = e.target; if (td.tagName !== 'TD') return;
+    if (e.key === 'Enter') { e.preventDefault(); startEdit(td); }
+    else if (e.key.startsWith('Arrow')) {
+      e.preventDefault();
+      const tr = td.parentNode, x = [...tr.children].indexOf(td), d = e.key === 'ArrowRight' ? 1 : e.key === 'ArrowLeft' ? -1 : 0;
+      const r = e.key === 'ArrowDown' ? tr.nextElementSibling : e.key === 'ArrowUp' ? tr.previousElementSibling : tr;
+      let n = r?.children[x + d];
+      while (n && n.dataset.j != null && t.hidden.has(+n.dataset.j)) n = n.parentNode.children[[...n.parentNode.children].indexOf(n) + (d || 1)];
+      if (n) focusCell(n);
+    }
+  });
+  refresh();
+  return [h('div', { class: 'pcol' }, bar, grid, foot), det];
+}
+
+async function addRow(t) {
+  const m = ensureMeta(t), T = qi(t.name);
+  const fields = m.cols.map((c, i) => {
+    const kind = numKind(c.type);
+    const inp = h('input', { class: 'in', id: `f${i}`, type: kind ? 'number' : 'text', step: kind === 'int' ? '1' : 'any', placeholder: c.df != null ? `Default: ${c.df}` : 'Default' });
+    const nul = h('input', { type: 'checkbox', id: `n${i}`, onchange: () => { inp.disabled = nul.checked; } });
+    return { c, kind, inp, nul, row: h('div', { class: 'ff' }, h('label', { class: 'n', for: `f${i}` }, h('b', {}, c.name), c.type ? ` · ${c.type}` : '', c.pk ? ' · primary key' : ''), inp, h('label', { class: 'chk' }, nul, 'Set NULL')) };
+  });
+  const ok = await modal(`Add row to ${t.name}`, h('div', {}, ...fields.map(f => f.row)), [{ label: 'Add row', run: () => {
+    const names = [], vals = [];
+    for (const f of fields) {
+      if (f.nul.checked) { names.push(f.c.name); vals.push(null); }
+      else if (f.inp.value !== '') {
+        const v = f.kind ? Number(f.inp.value) : f.inp.value;
+        if (f.kind && !Number.isFinite(v)) throw new Error(`Enter a valid number for ${f.c.name}`);
+        names.push(f.c.name); vals.push(v);
+      }
+    }
+    run(names.length ? `INSERT INTO ${T} (${names.map(qi).join(',')}) VALUES (${names.map(() => '?').join(',')})` : `INSERT INTO ${T} DEFAULT VALUES`, vals);
+    return true;
+  } }]);
+  if (ok) { t.page = Infinity; afterChange(t, 'Row added'); }
+}
+function dupRow(t) {
+  try {
+    const m = ensureMeta(t), T = qi(t.name), cs = m.cols.filter(c => !isRidAlias(c, m)).map(c => qi(c.name)).join(',');
+    run(cs ? `INSERT INTO ${T} (${cs}) SELECT ${cs} FROM ${T} WHERE rowid = ?` : `INSERT INTO ${T} DEFAULT VALUES`, [t.rows[t.sel][0]]);
+    t.page = Infinity; afterChange(t, 'Row duplicated');
+  } catch (e) { fail('Duplicate failed', e, 'A unique column may need a new value, so add the row manually'); }
+}
+async function delRow(t) {
+  const rid = t.rows[t.sel][0];
+  if (!(await confirmBox('Delete row', `Delete row ${rid} from ${t.name}? You can undo this only by reopening the original file.`, 'Delete row', true))) return;
+  try { run(`DELETE FROM ${qi(t.name)} WHERE rowid = ?`, [rid]); afterChange(t, 'Row deleted'); }
+  catch (e) { fail('Delete failed', e, 'Check for foreign key constraints and try again'); }
+}
+function afterChange(t, msg) { t.api.refresh(); recount(t); toast(msg, 'success'); }
+
+function structureView(t) {
+  const m = ensureMeta(t), T = qi(t.name), st = (head, rows) => h('table', { class: 'st' }, h('thead', {}, h('tr', {}, ...head.map(x => h('th', {}, x)))),
+    h('tbody', {}, ...rows.map(r => h('tr', {}, ...r.map(v => h('td', {}, v == null ? '' : String(v)))))));
+  const sec = (title, node) => h('section', {}, h('h3', { class: 't2', style: 'margin-bottom:8px' }, title), node);
+  let idx = [], fks = [];
+  try {
+    idx = all(`PRAGMA index_list(${T})`).rows.map(([, name, uniq, origin]) => [name, uniq ? 'Yes' : 'No', origin, all(`PRAGMA index_info(${qi(name)})`).rows.map(r => r[2]).join(', ')]);
+    fks = all(`PRAGMA foreign_key_list(${T})`).rows.map(r => [r[3], `${r[2]}(${r[4] ?? ''})`, r[5], r[6]]);
+  } catch { /* views have no indexes or keys */ }
+  return h('div', { class: 'strw' },
+    sec('Create statement', h('pre', { class: 'ddl' }, m.info.sql || 'No statement is stored for this object')),
+    sec('Columns', st(['Name', 'Type', 'Not null', 'Default', 'Primary key'], m.cols.map(c => [c.name, c.type, c.nn ? 'Yes' : 'No', c.df, c.pk ? `Yes (${c.pk})` : 'No']))),
+    sec('Indexes', idx.length ? st(['Name', 'Unique', 'Origin', 'Columns'], idx) : h('p', { class: 'mu' }, 'This object has no indexes')),
+    sec('Foreign keys', fks.length ? st(['Column', 'References', 'On update', 'On delete'], fks) : h('p', { class: 'mu' }, 'This object has no foreign keys')));
+}
+
+/* ---------- SQL tab ---------- */
+function runSql() {
+  const s = S.sql, sql = s.text.trim();
+  if (!S.db || !sql) return;
+  const t0 = performance.now();
+  try {
+    const out = S.db.exec(sql);
+    s.ms = performance.now() - t0; s.err = '';
+    s.results = out.map(r => ({ cols: r.columns, rows: r.values }));
+    s.msg = s.results.length ? '' : `Statement ran. ${fmtN(S.db.getRowsModified())} rows affected.`;
+    // Heuristic: any statement containing a write keyword marks the database dirty.
+    if (/\b(insert|update|delete|replace|create|drop|alter|reindex|vacuum|attach|detach)\b/i.test(sql)) { markDirty(); readSchema(); }
+  } catch (e) { s.ms = performance.now() - t0; s.err = errMsg(e); s.results = []; s.msg = ''; }
+  s.history = [sql, ...s.history.filter(q => q !== sql)].slice(0, 30);
+  store.set('tw-history', s.history);
+  render(); $('.sqled')?.focus();
+}
+function sqlView() {
+  const s = S.sql;
+  const ta = h('textarea', { class: 'sqled', 'aria-label': 'SQL editor', spellcheck: 'false', oninput: () => { s.text = ta.value; } });
+  ta.value = s.text;
+  ta.addEventListener('keydown', e => { if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); runSql(); } });
+  const res = h('div', { class: 'sqres' });
+  if (s.err) res.append(h('div', { class: 'err', role: 'alert' }, s.err));
+  else if (s.msg) res.append(h('div', { class: 'okb' }, s.msg));
+  s.results.forEach((r, k) => {
+    const shown = r.rows.slice(0, 500);
+    res.append(h('div', {}, h('div', { class: 'rl' }, h('span', {}, `Result ${k + 1} · ${fmtN(r.rows.length)} rows`), r.rows.length > 0 && btn('Export CSV', 'download', () => saveCsv(r.cols, r.rows, `result-${k + 1}.csv`))),
+      r.rows.length ? h('div', { class: 'rwrap' }, h('table', { class: 'g', style: `width:${r.cols.length * 192}px` },
+        h('colgroup', {}, ...r.cols.map(() => h('col', { style: 'width:192px' }))),
+        h('thead', {}, h('tr', { class: 'h' }, ...r.cols.map(n => h('th', { title: n }, n)))),
+        h('tbody', {}, ...shown.map(row => h('tr', {}, ...row.map(v => { const td = h('td'); fillCell(td, v); return td; })))))) : h('div', { class: 'mu' }, 'This query returned no rows.'),
+      r.rows.length > 500 && h('div', { class: 'mu', style: 'margin-top:8px' }, `Showing the first 500 of ${fmtN(r.rows.length)} rows`)));
+  });
+  if (!s.err && !s.msg && !s.results.length) res.append(h('div', { class: 'empty' }, 'Write a query above and choose Run query to see results here.'));
+  const hist = s.history.length ? h('div', { class: 'hist', role: 'list', 'aria-label': 'Query history' },
+    ...s.history.map(q => h('button', { title: q, onclick: () => { s.text = ta.value = q; ta.focus(); } }, q.replace(/\s+/g, ' ')))) : null;
+  return h('div', { class: 'sqlp' }, ta,
+    h('div', { class: 'bar', style: 'padding:0;border:0;background:none' }, h('button', { class: 'btn pri', onclick: runSql }, ic('play'), 'Run query'),
+      h('span', { class: 'mu' }, 'Ctrl+Enter or Cmd+Enter'), h('span', { class: 'sp' }), s.ms != null && h('span', { style: 'font-weight:500;font-variant-numeric:tabular-nums' }, `${s.ms.toFixed(1)} ms`)),
+    res, hist);
+}
+
+/* ---------- shell rendering ---------- */
+function syncChrome() {
+  $('#dl').disabled = !S.db; $('#sq').disabled = !S.db; $('#imp').disabled = !S.db; $('#dirty').hidden = !S.dirty;
+  $('#status').textContent = S.db ? `${S.name} · ${fmtB(S.size)}` : '';
+  document.title = S.db ? `${S.name} · Tablewright` : 'Tablewright';
+}
+function renderSide() {
+  const L = $('#list'); L.replaceChildren();
+  if (!S.db) { L.append(h('div', { class: 'empty' }, 'Open a database to see its tables')); return; }
+  const q = S.sideQ.toLowerCase(), shown = S.tables.filter(t => t.name.toLowerCase().includes(q));
+  if (!shown.length) { L.append(h('div', { class: 'empty' }, S.tables.length ? 'No tables match this filter' : 'This database has no tables')); return; }
+  for (const g of ['table', 'view']) {
+    const items = shown.filter(t => t.type === g); if (!items.length) continue;
+    L.append(h('div', { class: 'grp' }, g === 'table' ? 'Tables' : 'Views'),
+      ...items.map(t => h('button', { class: 'item', 'aria-current': String(S.active === t.name), onclick: () => { openTab(t.name); render(); } },
+        ic(g === 'table' ? 'table' : 'eye'), h('span', { class: 'nm', title: t.name }, t.name), h('span', { class: 'ct' }, fmtN(t.count)))));
+  }
+}
+function renderTabs() {
+  const T = $('#tabs'); T.replaceChildren(); if (!S.db) return;
+  const mk = (id, label, icon, closable) => h('div', { class: 'tab' + (S.active === id ? ' on' : '') },
+    h('button', { class: 'tb', role: 'tab', 'aria-selected': String(S.active === id), onclick: () => { S.active = id; render(); } }, ic(icon), label),
+    closable && h('button', { class: 'cl', 'aria-label': `Close ${label}`, onclick: () => closeTab(id) }, ic('x')));
+  T.append(mk('sql', 'SQL', 'terminal', false), ...S.tabs.map(t => mk(t.id, t.name, 'table', true)));
+}
+function renderPanel() {
+  const Pn = $('#panel'); Pn.replaceChildren();
+  if (!S.db) {
+    Pn.append(h('div', { class: 'drop' }, S.loadErr && h('div', { class: 'err', role: 'alert' }, S.loadErr),
+      h('p', { class: 'dt' }, 'Drop a .db / .sqlite file here, or ', h('button', { class: 'btn', style: 'margin-left:8px', onclick: pick }, 'Choose file')),
+      h('p', { class: 'mu' }, 'Files are opened in your browser and never uploaded')));
+    return;
+  }
+  const t = S.tabs.find(x => x.id === S.active);
+  Pn.append(...(S.active === 'sql' || !t ? [sqlView()] : tableView(t)));
+}
+function render() { syncChrome(); renderSide(); renderTabs(); renderPanel(); }
+
+function showHelp() {
+  const rows = [['Open file', 'Ctrl or Cmd + O'], ['Download database', 'Ctrl or Cmd + S'], ['Run query', 'Ctrl or Cmd + Enter'], ['Filter tables', 'Ctrl or Cmd + K'],
+    ['Show shortcuts', 'Ctrl or Cmd + /'], ['Move between cells', 'Arrow keys'], ['Edit a cell', 'Enter or double-click'], ['Save an edit', 'Enter'], ['Cancel an edit', 'Esc'], ['Save and edit next cell', 'Tab']];
+  modal('Keyboard shortcuts', h('table', { class: 'st' }, h('tbody', {}, ...rows.map(([a, b]) => h('tr', {}, h('td', {}, a), h('td', { class: 'mu' }, b))))), [], 'Close');
+}
+
+/* ---------- CSV import ---------- */
+// Minimal RFC 4180 parser: quoted fields, doubled quotes, CRLF or LF row breaks.
+function parseCsv(text) {
+  const rows = []; let row = [], f = '', q = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (q) { if (c === '"') { if (text[i + 1] === '"') { f += '"'; i++; } else q = false; } else f += c; }
+    else if (c === '"') q = true;
+    else if (c === ',') { row.push(f); f = ''; }
+    else if (c === '\n' || c === '\r') { if (c === '\r' && text[i + 1] === '\n') i++; row.push(f); rows.push(row); row = []; f = ''; }
+    else f += c;
+  }
+  if (f !== '' || row.length) { row.push(f); rows.push(row); }
+  return rows.filter(r => r.length > 1 || r[0] !== '');
+}
+async function importCsv(file) {
+  try {
+    const rows = parseCsv((await file.text()).replace(/^\uFEFF/, ''));
+    if (rows.length < 2) throw new Error('The CSV needs a header row and at least one data row');
+    const seen = new Set();
+    const head = rows[0].map((n, i) => { const b = n.trim() || `column_${i + 1}`; let x = b, k = 2; while (seen.has(x.toLowerCase())) x = `${b}_${k++}`; seen.add(x.toLowerCase()); return x; });
+    const data = rows.slice(1);
+    const input = h('input', { class: 'in', id: 'tn', 'aria-label': 'Table name' });
+    input.value = file.name.replace(/\.[^.]+$/, '').replace(/\W+/g, '_') || 'imported';
+    const name = await modal('Import CSV', h('div', {}, h('p', { class: 'mu', style: 'margin-bottom:12px' }, `${fmtN(data.length)} rows and ${head.length} columns found. All columns are created as TEXT.`), h('label', { for: 'tn', class: 'fl' }, 'Table name'), input), [{ label: 'Import CSV', run: () => {
+      const n = input.value.trim();
+      if (!n) throw new Error('Enter a table name');
+      if (S.tables.some(t => t.name.toLowerCase() === n.toLowerCase())) throw new Error(`A table named ${n} already exists`);
+      S.db.exec('BEGIN');
+      try {
+        S.db.exec(`CREATE TABLE ${qi(n)} (${head.map(c => qi(c) + ' TEXT').join(', ')})`);
+        const st = S.db.prepare(`INSERT INTO ${qi(n)} VALUES (${head.map(() => '?').join(',')})`);
+        try { for (const r of data) st.run(head.map((_, i) => r[i] ?? null)); } finally { st.free(); }
+        S.db.exec('COMMIT');
+      } catch (e) { try { S.db.exec('ROLLBACK'); } catch { /* nothing to roll back */ } throw e; }
+      markDirty(); readSchema(); return n;
+    } }]);
+    if (name) { openTab(name); render(); toast(`Imported ${fmtN(data.length)} rows into ${name}`, 'success'); }
+  } catch (e) { fail('Import failed', e, 'Check that the file is a CSV with a header row'); }
+}
+
+/* ---------- wiring ---------- */
+const pick = () => $('#file').click();
+const root = document.documentElement;
+function setTheme(t, persist) {
+  root.dataset.theme = t;
+  if (persist) store.set('tw-theme', t);
+  const b = $('#theme'); b.replaceChildren(ic(t === 'dark' ? 'sun' : 'moon'));
+  b.setAttribute('aria-label', t === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'); b.title = b.getAttribute('aria-label');
+}
+document.querySelectorAll('[data-ic]').forEach(s => s.replaceWith(ic(s.dataset.ic)));
+setTheme(store.get('tw-theme', null) || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'));
+document.body.classList.toggle('compact', store.get('tw-compact', false));
+$('#theme').onclick = () => setTheme(root.dataset.theme === 'dark' ? 'light' : 'dark', true);
+$('#dens').onclick = () => store.set('tw-compact', document.body.classList.toggle('compact'));
+$('#help').onclick = showHelp;
+$('#open').onclick = pick; $('#new').onclick = newDb; $('#dl').onclick = download;
+$('#sb').onclick = () => $('#app').classList.toggle('collapsed');
+$('#sq').oninput = e => { S.sideQ = e.target.value; renderSide(); };
+$('#file').onchange = e => { const f = e.target.files[0]; e.target.value = ''; if (f) loadFile(f); };
+const narrow = matchMedia('(max-width:1000px)');
+const fitSidebar = () => $('#app').classList.toggle('collapsed', narrow.matches);
+narrow.addEventListener('change', fitSidebar); fitSidebar();
+
+addEventListener('dragover', e => { e.preventDefault(); document.body.classList.add('dragging'); });
+addEventListener('dragleave', e => { if (!e.relatedTarget) document.body.classList.remove('dragging'); });
+addEventListener('drop', e => { e.preventDefault(); document.body.classList.remove('dragging'); const f = e.dataTransfer?.files[0]; if (f) loadFile(f); });
+addEventListener('beforeunload', e => { if (S.dirty) { e.preventDefault(); e.returnValue = ''; } });
+document.addEventListener('click', e => document.querySelectorAll('.pop:not([hidden])').forEach(p => { if (!p.parentNode.contains(e.target)) p.hidden = true; }));
+addEventListener('keydown', e => {
+  const mod = e.ctrlKey || e.metaKey, k = e.key.toLowerCase();
+  if (mod && k === 'o') { e.preventDefault(); pick(); }
+  else if (mod && k === 's') { e.preventDefault(); download(); }
+  else if (mod && k === 'k') { e.preventDefault(); $('#app').classList.remove('collapsed'); $('#sq').focus(); }
+  else if (mod && k === '/') { e.preventDefault(); showHelp(); }
+  else if (mod && e.key === 'Enter' && S.active === 'sql' && !document.querySelector('dialog[open]')) { e.preventDefault(); runSql(); }
+  else if (e.key === 'Escape') document.querySelectorAll('.pop').forEach(p => p.hidden = true);
+});
+addEventListener('unhandledrejection', e => { e.preventDefault(); fail('Something went wrong', e.reason, 'Reload the page if this keeps happening'); });
+addEventListener('error', e => fail('Something went wrong', e.error || e.message, 'Reload the page if this keeps happening'));
+
+render();
+$('#imp').onclick = () => $('#csv').click();
+$('#csv').onchange = e => { const f = e.target.files[0]; e.target.value = ''; if (f) importCsv(f); };
+// Narrow-screen notice: shown below 768 px, dismissible for the session.
+let warnOff = false;
+const small = matchMedia('(max-width:767px)');
+const syncWarn = () => { $('#warn').hidden = !small.matches || warnOff; };
+small.addEventListener('change', syncWarn);
+$('#warnx').onclick = () => { warnOff = true; syncWarn(); };
+syncWarn();
+loadEngine().catch(() => { /* surfaced when a file is opened */ });
+</script>
+</body>
+</html>
